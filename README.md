@@ -1,6 +1,6 @@
 # Forester
 
-<img src="./github/mapping_out_the_forest.svg" />
+<img src="./github/mapping_out_the_forest.png" />
 
 ### Problem
 A system's architecture must be understood well. Diagrams show structure and components. But code evolves, and architecture changes. And it becomes increasingly difficult to keep the diagrams synced with the code. Outdated diagrams can lead to miscommunication, misconceptions about the system, and ultimately, increased costs of development and maintenance.
