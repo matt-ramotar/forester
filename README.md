@@ -1,7 +1,5 @@
 # Forester
 
-A Kotlin Multiplatform library for mapping out the forest.
-
 <img src="./github/mapping_out_the_forest.svg" />
 
 ### Problem
