@@ -2,7 +2,7 @@
 
 A Kotlin library for mapping out the forest.
 
-<img src="./github/mapping_out_the_forest.png" alt="Mapping out the forest"/>
+<img src="./github/mapping_out_the_forest.png" alt="Mapping out the forest" height="350"/>
 
 ## Problem
 
@@ -27,8 +27,8 @@ Forester keeps code and diagrams aligned:
 ## Installation
 
 ```shell
-plugins {
-  id("com.dropbox.forester.plugin")
+plugins { 
+  id("com.dropbox.forester.plugin") 
 }
 
 implementation("com.dropbox.forester:forester:0.0.1")
@@ -37,18 +37,33 @@ implementation("com.dropbox.forester:forester:0.0.1")
 ## Sample
 
 ```kotlin
-forester {
-  node("server.counter", shape = Shape.Cloud)
-  node(Api::class)
-  node(Repository::class)
-  node(ViewModel::class)
-  node("xplat.counter.CounterScreen", shape = Shape.Parallelogram)
-
-  directed("server.counter", Api::class)
-  directed(Api::class, Repository::class)
-  directed(Repository::class, ViewModel::class)
-  undirected(ViewModel::class, "xplat.counter.CounterScreen")
+@Forester
+object Server {
+    object Counter {
+        val subscribe = node("server.counter", Shape.Cloud)
+    }
 }
 ```
 
-<img src="github/sample_class.png"/>
+```kotlin
+@Forester
+object Xplat {
+    object Counter {
+        val Api = node(CounterApi::class)
+        val Repository = node(CounterRepository::class)
+        val ViewModel = node(CounterViewModel::class)
+        val CounterScreen = node("xplat.counter.CounterScreen", Shape.Parallelogram)
+    }
+}
+```
+
+```kotlin
+forester {
+    directed(subscribe, Api)
+    undirected(Api, Repository)
+    undirected(Repository, ViewModel)
+    undirected(ViewModel, CounterScreen)
+}
+```
+
+<img src="github/sample_class.png" height="650"/>

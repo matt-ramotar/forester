@@ -10,6 +10,11 @@ class ForesterConfig(
     val edges: MutableList<Edge> = mutableListOf()
 ) {
 
+    fun node(node: Node): ForesterConfig {
+        nodes[node.qualifiedName!!] = node
+        return this
+    }
+
     fun node(clazz: KClass<*>, shape: Shape = Shape.Rectangle): ForesterConfig {
         nodes[clazz.qualifiedName!!] = Node(shape = shape, loadable = true)
         return this
@@ -23,6 +28,11 @@ class ForesterConfig(
 
     fun undirected(u: String?, v: String?): ForesterConfig {
         edges.add(Edge(u!!, v!!, Edge.Type.Undirected))
+        return this
+    }
+
+    fun directed(head: Node, tail: Node): ForesterConfig {
+        edges.add(Edge(head.qualifiedName!!, tail.qualifiedName!!, Edge.Type.Directed))
         return this
     }
 
@@ -56,4 +66,16 @@ class ForesterConfig(
 
 fun forester(config: ForesterConfig.() -> Unit): ForesterConfig = ForesterConfig().apply {
     config()
+}
+
+
+fun node(qualifiedName: String? = null, shape: Shape = Shape.Rectangle, loadable: Boolean = true) =
+    Node(qualifiedName, shape, loadable)
+
+fun node(path: String? = null, shape: Shape = Shape.Rectangle): Node {
+    return Node(path, shape, loadable = false)
+}
+
+fun node(clazz: KClass<*>, shape: Shape = Shape.Rectangle): Node {
+    return Node(clazz.qualifiedName!!, shape, loadable = true)
 }
