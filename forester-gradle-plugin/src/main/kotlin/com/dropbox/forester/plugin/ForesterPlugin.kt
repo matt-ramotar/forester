@@ -5,16 +5,12 @@ import com.dropbox.forester.Forester
 import com.dropbox.forester.ForesterConfig
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.objectweb.asm.AnnotationVisitor
-import org.objectweb.asm.Opcodes
 import java.io.FileInputStream
 import java.net.URL
 import java.net.URLClassLoader
 
 class ForesterPlugin : Plugin<Project> {
     override fun apply(target: Project) {
-        target.pluginManager.apply("com.dropbox.forester.plugin")
-
         val extension = target.extensions.create("forester", ForesterPluginExt::class.java)
 
         target.tasks.register("forester") {
@@ -28,27 +24,23 @@ class ForesterPlugin : Plugin<Project> {
                 }
             }
 
-
             it.extensions.add("forester", extension)
 
             val outputDir = extension.outputDir ?: "${target.buildDir.path}/forester"
             val outputPath = outputDir + "/${target.name}"
 
             it.doLast {
-
-
                 val buildDir = target.buildDir.resolve("classes/kotlin/jvm/main")
 
-                val files = buildDir.walk().flatMap { file -> listOf(file, file.parentFile) }
+                val files = buildDir
+                    .walk()
+                    .flatMap { file -> listOf(file, file.parentFile) }
                     .filter { file -> file.isFile && file.name.endsWith(".class") }
                     .toList()
 
-
-                val urls = files.filter {
-                    it.isFile && it.name.endsWith(".class")
-                }.map {
-                    it.toURI().toURL()
-                }
+                val urls = files
+                    .filter { it.isFile && it.name.endsWith(".class") }
+                    .map { it.toURI().toURL() }
                     .toTypedArray()
 
                 val classpath = arrayOf(buildDir.toURI().toURL()) + urls
@@ -158,29 +150,8 @@ class ForesterPlugin : Plugin<Project> {
 
                         println("Run ./gradlew :${target}:installD2")
                     }
-
                 }
             }
         }
     }
-}
-
-
-class ForesterAnnotationVisitor : org.objectweb.asm.ClassVisitor(Opcodes.ASM9) {
-    var hasAnnotation = false
-    override fun visitAnnotation(
-        descriptor: String?,
-        visible: Boolean
-    ): AnnotationVisitor {
-
-        if (descriptor?.contains("Lcom/dropbox/forester/ForesterExport;") == true) {
-            hasAnnotation = true
-        }
-
-        return super.visitAnnotation(descriptor, visible) ?: FallbackAnnotationVisitor()
-    }
-}
-
-class FallbackAnnotationVisitor : AnnotationVisitor(Opcodes.ASM9) {
-    var hasAnnotation = false
 }
