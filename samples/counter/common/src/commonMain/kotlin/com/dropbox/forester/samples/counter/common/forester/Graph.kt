@@ -4,7 +4,7 @@ import com.dropbox.forester.Forester
 import com.dropbox.forester.forester
 
 @Forester
-class Forester() {
+class Graph() {
     fun map() = forester {
         directed(Server.Counter.subscribe, Xplat.Counter.Api)
         directed(Xplat.Counter.Api, Xplat.Counter.Repository)

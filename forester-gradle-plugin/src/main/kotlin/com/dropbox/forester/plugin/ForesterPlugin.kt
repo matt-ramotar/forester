@@ -8,6 +8,7 @@ import org.gradle.api.Project
 import java.io.FileInputStream
 import java.net.URL
 import java.net.URLClassLoader
+import kotlin.reflect.full.memberFunctions
 
 class ForesterPlugin : Plugin<Project> {
     override fun apply(target: Project) {
@@ -18,9 +19,11 @@ class ForesterPlugin : Plugin<Project> {
             it.description = "Map the forest"
 
             it.doFirst {
-                target.exec {
-                    it.executable("sh")
-                    it.args("-c", "curl -fsSL https://d2lang.com/install.sh | sh -s")
+                if (extension.update) {
+                    target.exec {
+                        it.executable("sh")
+                        it.args("-c", "curl -fsSL https://d2lang.com/install.sh | sh -s")
+                    }
                 }
             }
 
@@ -110,15 +113,44 @@ class ForesterPlugin : Plugin<Project> {
                                     }
                                 }
 
-
                                 val nodesD2 = nodes.toMutableList().map { node ->
-                                    """
+
+                                    try {
+                                        val cls = urlClassLoader.loadClass(requireNotNull(node.qualifiedName))
+                                        cls.declaredFields.forEach {
+                                            println("field = $it")
+                                        }
+                                        val methods = cls.kotlin.memberFunctions
+
+                                        """${node.qualifiedName ?: ""}: {
+                                            shape: class
+                                            ${
+                                            methods.filter {
+                                                !setOf(
+                                                    "equals",
+                                                    "hashCode",
+                                                    "toString"
+                                                ).contains(it.name)
+                                            }.map { method ->
+                                                println(method.returnType)
+
+                                                "${method.name}(): ${
+                                                    method.returnType.toString().replace("kotlin.", "")
+                                                }"
+                                            }.joinToString("\n").trimIndent()
+                                        }
+                                        }
+                                        """.trimIndent()
+
+
+                                    } catch (error: Throwable) {
+                                        """
                                ${node.qualifiedName ?: ""}: {
                                     shape: ${node.shape.name.lowercase()}
                                 }
                             """.trimIndent()
+                                    }
                                 }
-
 
                                 if (!target.file(target.buildDir.path).exists()) {
                                     target.file(target.buildDir.path).mkdir()
@@ -196,5 +228,19 @@ fun walk(clazz: Class<*>, nodes: MutableSet<Node>, visited: MutableSet<Class<*>>
             }
         }
 
+    }
+}
+
+fun kotlinTypeToJavaName(type: String): String {
+    return when (type) {
+        "kotlin.Int" -> "int"
+        "kotlin.Long" -> "long"
+        "kotlin.Short" -> "short"
+        "kotlin.Byte" -> "byte"
+        "kotlin.Float" -> "float"
+        "kotlin.Double" -> "double"
+        "kotlin.Boolean" -> "boolean"
+        "kotlin.Char" -> "char"
+        else -> type
     }
 }

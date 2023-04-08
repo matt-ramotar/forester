@@ -9,8 +9,6 @@ import com.dropbox.forester.samples.counter.common.CounterViewModel
 
 @Forester
 object Xplat {
-    val Test = node("test")
-
     object Counter {
         val Api = node(CounterApi::class)
         val Repository = node(CounterRepository::class)
