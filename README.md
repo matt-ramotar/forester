@@ -2,7 +2,7 @@
 
 A Kotlin library for mapping out the forest.
 
-<img src="./github/mapping_out_the_forest.png" alt="Mapping out the forest" height="300px"/>
+<img src="./github/mapping_out_the_forest.png" alt="Mapping out the forest"/>
 
 ## Problem
 
@@ -31,34 +31,24 @@ plugins {
   id("com.dropbox.forester.plugin")
 }
 
-implementation("com.dropbox.forester:forester:0.1.0")
-
-forester {
-  outputDir = "docs/forester"
-}
+implementation("com.dropbox.forester:forester:0.0.1")
 ```
 
 ## Sample
 
 ```kotlin
-@ForesterExport
-class Forester {
+forester {
+  node("server.counter", shape = Shape.Cloud)
+  node(Api::class)
+  node(Repository::class)
+  node(ViewModel::class)
+  node("xplat.counter.CounterScreen", shape = Shape.Parallelogram)
 
-    @Forester
-    fun map() = forester {
-        node("server.counter.subscribe")
-        node(Api::class)
-        node(Repository::class)
-        node(ViewModel::class)
-        node("xplat.counter.CounterScreen")
-
-        directed("server.counter.subscribe", Api::class)
-        directed(Api::class, Repository::class)
-        directed(Repository::class, ViewModel::class)
-        undirected(ViewModel::class, CounterScreen)
-    }
+  directed("server.counter", Api::class)
+  directed(Api::class, Repository::class)
+  directed(Repository::class, ViewModel::class)
+  undirected(ViewModel::class, "xplat.counter.CounterScreen")
 }
-
 ```
 
-<img src="github/sample_class.png" />
+<img src="github/sample_class.png"/>
