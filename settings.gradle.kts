@@ -3,6 +3,7 @@ pluginManagement {
         google()
         gradlePluginPortal()
         mavenCentral()
+        mavenLocal()
     }
 
     plugins {
@@ -15,7 +16,9 @@ pluginManagement {
 
 rootProject.name = "forester"
 
-
 include(
-    ":forester"
+    ":forester",
+    ":forester-gradle-plugin",
+    ":samples:counter:android",
+    ":samples:counter:common",
 )

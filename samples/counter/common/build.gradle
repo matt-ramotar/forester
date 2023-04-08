@@ -1,33 +1,23 @@
 plugins {
     id("org.jetbrains.kotlin.multiplatform")
     id("org.jetbrains.kotlin.plugin.serialization")
-    id("com.android.library")
+    id("com.dropbox.forester.plugin")
 }
 
 kotlin {
-    android()
-    iosArm64()
-    iosX64()
-    iosSimulatorArm64()
 
-    js(IR) {
-        browser()
-    }
     jvm()
 
     sourceSets {
         commonMain {
             dependencies {
                 implementation(libs.kotlinx.serialization.core)
+                implementation project(":forester")
             }
         }
     }
 }
-
-android {
-    compileSdk = 33
-    compileSdkVersion = "android-33"
-    defaultConfig {
-        minSdk = 27
-    }
+forester {
+    setOutputDirPath("doc")
 }
+
