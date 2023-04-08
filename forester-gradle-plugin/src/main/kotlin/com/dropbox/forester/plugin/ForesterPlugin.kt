@@ -9,6 +9,7 @@ import java.io.FileInputStream
 import java.net.URL
 import java.net.URLClassLoader
 import kotlin.reflect.full.memberFunctions
+import kotlin.reflect.jvm.jvmErasure
 
 class ForesterPlugin : Plugin<Project> {
     override fun apply(target: Project) {
@@ -132,15 +133,17 @@ class ForesterPlugin : Plugin<Project> {
                                                     "toString"
                                                 ).contains(it.name)
                                             }.map { method ->
-                                                println(method.returnType)
 
-                                                "${method.name}(): ${
+
+                                                val argsList = method.parameters.map { it.type.jvmErasure.simpleName }
+                                                val args = argsList.drop(1)
+
+                                                "${method.name}(${args.joinToString(", ").trim()}): ${
                                                     method.returnType.toString().replace("kotlin.", "")
                                                 }"
                                             }.joinToString("\n").trimIndent()
                                         }
-                                        }
-                                        """.trimIndent()
+                                        }""".trimIndent()
 
 
                                     } catch (error: Throwable) {
@@ -160,8 +163,12 @@ class ForesterPlugin : Plugin<Project> {
                                     target.file("${target.buildDir.path}/forester").mkdir()
                                 }
 
-                                target.file("${outputPath}.d2").delete()
-                                val outputFile = target.file("${outputPath}.d2")
+                                println(target.name)
+                                val path = target.file("${target.buildDir.path}/forester/${target.name}.d2")
+                                path.delete()
+
+                                val outputFile = path
+
                                 nodesD2.forEach { node ->
                                     outputFile.appendText(node)
                                     outputFile.appendText("\n")
@@ -180,9 +187,11 @@ class ForesterPlugin : Plugin<Project> {
 
                 target.exec {
                     try {
+                        val path = target.file("${target.buildDir.path}/forester/${target.name}.d2")
+
                         it.commandLine(
                             "/opt/homebrew/Cellar/d2/0.3.0/bin/d2",
-                            "${outputPath}.d2",
+                            path,
                             "${outputPath}.svg",
                             "--sketch"
                         )
