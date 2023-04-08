@@ -18,6 +18,6 @@ kotlin {
     }
 }
 forester {
-    setOutputDirPath("doc")
+    outputDir = "doc"
 }
 

@@ -31,7 +31,7 @@ plugins {
 implementation("com.dropbox.forester:forester:0.1.0")
 
 forester {
-  outputDirPath = "docs/forester"
+  outputDir = "docs/forester"
 }
 ```
 

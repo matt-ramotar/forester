@@ -15,10 +15,7 @@ class ForesterPlugin : Plugin<Project> {
     override fun apply(target: Project) {
         target.pluginManager.apply("com.dropbox.forester.plugin")
 
-
         val extension = target.extensions.create("forester", ForesterPluginExt::class.java)
-
-
 
         target.tasks.register("forester") {
             it.group = "Forester"
@@ -34,15 +31,15 @@ class ForesterPlugin : Plugin<Project> {
 
             it.extensions.add("forester", extension)
 
-            val outputDirPath = extension.outputDirPath ?: "${target.buildDir.path}/forester"
-            val outputPath = outputDirPath + "/${target.name}"
+            val outputDir = extension.outputDir ?: "${target.buildDir.path}/forester"
+            val outputPath = outputDir + "/${target.name}"
 
             it.doLast {
 
 
-                val outputDir = target.buildDir.resolve("classes/kotlin/jvm/main")
+                val buildDir = target.buildDir.resolve("classes/kotlin/jvm/main")
 
-                val files = outputDir.walk().flatMap { file -> listOf(file, file.parentFile) }
+                val files = buildDir.walk().flatMap { file -> listOf(file, file.parentFile) }
                     .filter { file -> file.isFile && file.name.endsWith(".class") }
                     .toList()
 
@@ -54,7 +51,7 @@ class ForesterPlugin : Plugin<Project> {
                 }
                     .toTypedArray()
 
-                val classpath = arrayOf(outputDir.toURI().toURL()) + urls
+                val classpath = arrayOf(buildDir.toURI().toURL()) + urls
                 val urlClassLoader = URLClassLoader(classpath, javaClass.classLoader)
 
                 val annotatedClasses = mutableListOf<Pair<URL, String>>()
@@ -62,13 +59,13 @@ class ForesterPlugin : Plugin<Project> {
                 urls.forEach { url ->
                     try {
                         val classReader = org.objectweb.asm.ClassReader(FileInputStream(url.path))
-                        val myAnnotationChecker = MyAnnotationChecker()
+                        val visitor = ForesterAnnotationVisitor()
 
-                        classReader.accept(myAnnotationChecker, 0)
+                        classReader.accept(visitor, 0)
 
                         val className = classReader.className
 
-                        if (myAnnotationChecker.hasAnnotation) {
+                        if (visitor.hasAnnotation) {
                             annotatedClasses.add(Pair(url, className))
                         }
                     } catch (error: Throwable) {
@@ -154,7 +151,8 @@ class ForesterPlugin : Plugin<Project> {
                         it.commandLine(
                             "/opt/homebrew/Cellar/d2/0.3.0/bin/d2",
                             "${outputPath}.d2",
-                            "${outputPath}.svg"
+                            "${outputPath}.svg",
+                            "--sketch"
                         )
                     } catch (error: Throwable) {
 
@@ -168,7 +166,7 @@ class ForesterPlugin : Plugin<Project> {
 }
 
 
-class MyAnnotationChecker : org.objectweb.asm.ClassVisitor(Opcodes.ASM9) {
+class ForesterAnnotationVisitor : org.objectweb.asm.ClassVisitor(Opcodes.ASM9) {
     var hasAnnotation = false
     override fun visitAnnotation(
         descriptor: String?,
