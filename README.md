@@ -2,7 +2,7 @@
 
 A Kotlin library for mapping out the forest.
 
-<img src="./github/mapping_out_the_forest.png" alt="Mapping out the forest"/>
+<img src="./github/mapping_out_the_forest.png" alt="Mapping out the forest" height="300px"/>
 
 ## Problem
 
@@ -12,12 +12,12 @@ It's crucial to have a comprehensive understanding of a system's architecture. A
 
 Forester keeps code and diagrams aligned:
 
-- **Automatic generation**: Forester parses your code and generates architecture diagrams based on your code's
+- **Automatic generation.** Forester parses your code and generates architecture diagrams based on your code's
   structure and annotations.
-- **Version control**: Store your architecture diagrams alongside your code in the same version control system.
-- **CI**: Integrate Forester into your CI pipeline to generate and update diagrams automatically
+- **Version control.** Store your architecture diagrams alongside your code in the same version control system.
+- **Continuous integration.** Integrate Forester into your CI pipeline to generate and update diagrams automatically
    whenever significant code changes are made.
-- **Collaboration**: Promote a culture of shared responsibility for keeping architecture diagrams current among your
+- **Collaboration.** Promote a culture of shared responsibility for keeping architecture diagrams current among your
    engineering team.
 
 ## Installation
