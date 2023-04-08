@@ -12,14 +12,13 @@ miscommunication, misconceptions about the system, and ultimately, increased cos
 
 ## Solution
 
-Forester keeps diagrams aligned with code using these tactics:
-
-1. **Automatic generation**: Forester parses your code and generates architecture diagrams based on your code's
-   structure and annotations.
-2. **Version control**: Store your architecture diagrams alongside your code in the same version control system.
-3. **Continuous integration**: Integrate Forester into your CI pipeline to generate and update diagrams automatically
+- **DSL**: Define nodes and edges using the Forester DSL.
+- **Automatic generation**: Forester parses your code and generates architecture diagrams based on your code's
+  structure and annotations.
+- **Version control**: Store your architecture diagrams alongside your code in the same version control system.
+- **CI**: Integrate Forester into your CI pipeline to generate and update diagrams automatically
    whenever significant code changes are made.
-4. **Collaboration**: Promote a culture of shared responsibility for keeping architecture diagrams current among your
+- **Collaboration**: Promote a culture of shared responsibility for keeping architecture diagrams current among your
    engineering team.
 
 ## Installation
