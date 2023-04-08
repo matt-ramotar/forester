@@ -1,8 +1,8 @@
 package com.dropbox.forester.plugin
 
 import com.dropbox.forester.Edge
-import com.dropbox.forester.Forester
-import com.dropbox.forester.ForesterConfig
+import com.dropbox.forester.ForesterGraph
+import com.dropbox.forester.Node
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import java.io.FileInputStream
@@ -65,47 +65,55 @@ class ForesterPlugin : Plugin<Project> {
                     }
                 }
 
+                val nodes: MutableSet<Node> = mutableSetOf()
+
                 annotatedClasses.forEach { (url, className) ->
                     val name = className.replace("/", ".")
+                    val clazz = urlClassLoader.loadClass(name)
+
+                    nodes.addAll(getNodes(clazz))
+                }
+
+
+                annotatedClasses.forEach { (url, className) ->
+                    val name = className.replace("/", ".")
+
+                    nodes.forEach {
+                        println(it)
+                    }
 
                     try {
 
                         val clazz = urlClassLoader.loadClass(name)
-                        val method = clazz.methods.firstOrNull { method ->
-                            method.isAnnotationPresent(Forester::class.java)
-                        }
+
+                        val method = clazz.methods.firstOrNull()
 
                         if (method != null) {
                             val instance = clazz.newInstance()
-                            val config = method.invoke(instance) as? ForesterConfig
+                            val config = method.invoke(instance) as? ForesterGraph
 
                             if (config != null) {
-                                val edges = config.edges.map { edge ->
-                                    edge.copy(
-                                        u = config.nodes[edge.u]?.qualifiedName ?: edge.u,
-                                        v = config.nodes[edge.v]?.qualifiedName ?: edge.v,
-                                    )
-                                }
-                                val edgesD2 = edges.map { edge ->
+
+                                val edgesD2 = config.edges.map { edge ->
                                     when (edge.edgeType) {
                                         Edge.Type.Directed -> {
                                             """
-                                ${edge.u} -> ${edge.v}
+                                ${edge.u.qualifiedName} -> ${edge.v.qualifiedName}
                             """.trimIndent()
                                         }
 
                                         Edge.Type.Undirected -> {
                                             """
-                                ${edge.u} <-> ${edge.v}
+                                ${edge.u.qualifiedName} <-> ${edge.v.qualifiedName}
                             """.trimIndent()
                                         }
                                     }
                                 }
 
 
-                                val nodesD2 = config.nodes.entries.map { (path, node) ->
+                                val nodesD2 = nodes.toMutableList().map { node ->
                                     """
-                                ${node.qualifiedName ?: path}: {
+                               ${node.qualifiedName ?: ""}: {
                                     shape: ${node.shape.name.lowercase()}
                                 }
                             """.trimIndent()
@@ -153,5 +161,40 @@ class ForesterPlugin : Plugin<Project> {
                 }
             }
         }
+    }
+}
+
+
+fun getNodes(clazz: Class<*>): MutableList<Node> {
+    val nodes = mutableSetOf<Node>()
+    val visited = mutableSetOf<Class<*>>()
+    walk(clazz, nodes, visited)
+    return nodes.toMutableList()
+}
+
+fun walk(clazz: Class<*>, nodes: MutableSet<Node>, visited: MutableSet<Class<*>> = mutableSetOf()) {
+
+    if (visited.contains(clazz)) {
+        return
+    }
+
+    visited.add(clazz)
+
+    clazz.declaredFields.forEach {
+        if (it.type.isAssignableFrom(Node::class.java)) {
+            println("ADDING")
+            try {
+                it.isAccessible = true
+                nodes.add(it.get(null) as Node)
+            } catch (error: Throwable) {
+                println(error)
+            }
+
+        } else if (it.type.declaredClasses.isNotEmpty()) {
+            it.type.declaredClasses.forEach { subClass ->
+                walk(subClass, nodes, visited)
+            }
+        }
+
     }
 }

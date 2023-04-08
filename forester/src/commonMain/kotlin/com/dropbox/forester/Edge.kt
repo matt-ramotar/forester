@@ -5,8 +5,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Edge(
-    val u: String,
-    val v: String,
+    val u: Node,
+    val v: Node,
     val edgeType: Type
 ) {
 

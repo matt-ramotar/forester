@@ -10,7 +10,7 @@ class ForesterAnnotationVisitor : org.objectweb.asm.ClassVisitor(Opcodes.ASM9) {
         visible: Boolean
     ): AnnotationVisitor {
 
-        if (descriptor?.contains("Lcom/dropbox/forester/ForesterExport;") == true) {
+        if (descriptor?.contains("Lcom/dropbox/forester/Forester;") == true) {
             hasAnnotation = true
         }
 

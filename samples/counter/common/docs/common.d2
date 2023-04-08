@@ -1,0 +1,22 @@
+com.dropbox.forester.samples.counter.common.CounterApi: {
+     shape: rectangle
+ }
+com.dropbox.forester.samples.counter.common.CounterRepository: {
+     shape: rectangle
+ }
+com.dropbox.forester.samples.counter.common.CounterViewModel: {
+     shape: rectangle
+ }
+xplat.counter.CounterScreen: {
+     shape: parallelogram
+ }
+test: {
+     shape: rectangle
+ }
+server.counter.subscribe: {
+     shape: cloud
+ }
+server.counter.subscribe -> com.dropbox.forester.samples.counter.common.CounterApi
+com.dropbox.forester.samples.counter.common.CounterApi -> com.dropbox.forester.samples.counter.common.CounterRepository
+com.dropbox.forester.samples.counter.common.CounterRepository -> com.dropbox.forester.samples.counter.common.CounterViewModel
+com.dropbox.forester.samples.counter.common.CounterViewModel -> xplat.counter.CounterScreen
