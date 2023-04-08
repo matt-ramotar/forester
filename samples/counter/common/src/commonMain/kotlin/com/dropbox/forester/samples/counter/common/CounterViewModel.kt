@@ -1,4 +1,6 @@
 package com.dropbox.forester.samples.counter.common
 
 
-class CounterViewModel
+interface CounterViewModel {
+    val state: Int
+}

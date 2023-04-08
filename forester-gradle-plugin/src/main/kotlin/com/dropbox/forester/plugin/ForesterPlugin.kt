@@ -9,6 +9,7 @@ import java.io.FileInputStream
 import java.net.URL
 import java.net.URLClassLoader
 import kotlin.reflect.full.memberFunctions
+import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.jvmErasure
 
 class ForesterPlugin : Plugin<Project> {
@@ -82,9 +83,6 @@ class ForesterPlugin : Plugin<Project> {
                 annotatedClasses.forEach { (url, className) ->
                     val name = className.replace("/", ".")
 
-                    nodes.forEach {
-                        println(it)
-                    }
 
                     try {
 
@@ -118,13 +116,20 @@ class ForesterPlugin : Plugin<Project> {
 
                                     try {
                                         val cls = urlClassLoader.loadClass(requireNotNull(node.qualifiedName))
-                                        cls.declaredFields.forEach {
-                                            println("field = $it")
-                                        }
+                                        val fields = cls.kotlin.memberProperties
+
+
                                         val methods = cls.kotlin.memberFunctions
 
                                         """${node.qualifiedName ?: ""}: {
                                             shape: class
+                                            
+                                            ${
+                                            fields.map { field ->
+                                                "${field.name}: ${field.returnType.toString().replace("kotlin.", "")}"
+                                            }.joinToString("\n").trimIndent()
+                                        }
+
                                             ${
                                             methods.filter {
                                                 !setOf(
@@ -163,7 +168,6 @@ class ForesterPlugin : Plugin<Project> {
                                     target.file("${target.buildDir.path}/forester").mkdir()
                                 }
 
-                                println(target.name)
                                 val path = target.file("${target.buildDir.path}/forester/${target.name}.d2")
                                 path.delete()
 
@@ -223,7 +227,6 @@ fun walk(clazz: Class<*>, nodes: MutableSet<Node>, visited: MutableSet<Class<*>>
 
     clazz.declaredFields.forEach {
         if (it.type.isAssignableFrom(Node::class.java)) {
-            println("ADDING")
             try {
                 it.isAccessible = true
                 nodes.add(it.get(null) as Node)
