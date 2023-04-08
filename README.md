@@ -6,7 +6,11 @@ A Kotlin library for mapping out the forest.
 
 ## Problem
 
-It's crucial to have a comprehensive understanding of a system's architecture. Architecture diagrams offer valuable visual representations of the system's structure and its components. However, as a codebase evolves and its architecture adapts, maintaining synchronization between the code and diagrams can become increasingly challenging. Outdated diagrams can result in miscommunication, misconceptions about the system, and ultimately, increased development and maintenance costs.
+It's crucial to have a comprehensive understanding of a system's architecture. Architecture diagrams offer valuable
+visual representations of the system's structure and its components. However, as a codebase evolves and its architecture
+adapts, maintaining synchronization between the code and diagrams can become increasingly challenging. Outdated diagrams
+can result in miscommunication, misconceptions about the system, and ultimately, increased development and maintenance
+costs.
 
 ## Solution
 
@@ -16,9 +20,9 @@ Forester keeps code and diagrams aligned:
   structure and annotations.
 - **Version control.** Store your architecture diagrams alongside your code in the same version control system.
 - **Continuous integration.** Integrate Forester into your CI pipeline to generate and update diagrams automatically
-   whenever significant code changes are made.
+  whenever significant code changes are made.
 - **Collaboration.** Promote a culture of shared responsibility for keeping architecture diagrams current among your
-   engineering team.
+  engineering team.
 
 ## Installation
 
@@ -35,7 +39,6 @@ forester {
 ```
 
 ## Sample
-
 
 ```kotlin
 @ForesterExport
@@ -58,4 +61,4 @@ class Forester {
 
 ```
 
-<img src="./github/sample.png"/>
+<img src="github/sample_class.png" />
