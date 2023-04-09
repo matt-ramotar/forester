@@ -56,6 +56,8 @@ forester {
 }
 ```
 
+## Output
+
 <img src="github/sample_class.png" height="650"/>
 
 ## License
