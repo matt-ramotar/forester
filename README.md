@@ -1,6 +1,6 @@
 # Forester
 
-<img src="./github/mapping_out_the_forest.png" alt="Mapping out the forest" height="350"/>
+<img src="./github/mapping_out_the_forest.png" alt="Mapping out the forest" height="450"/>
 
 ## Problem
 
