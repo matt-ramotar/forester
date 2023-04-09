@@ -1,11 +1,30 @@
 package com.dropbox.forester
 
-import kotlinx.serialization.Serializable
+import kotlin.reflect.KClass
 
-@Serializable
-data class Node(
-    val qualifiedName: String? = null,
-    val shape: Shape = Shape.Rectangle,
-    val loadable: Boolean = true,
+@MustBeDocumented
+@Retention(AnnotationRetention.RUNTIME)
+annotation class Graph
+
+@MustBeDocumented
+@Retention(AnnotationRetention.RUNTIME)
+annotation class Forest
+
+
+@MustBeDocumented
+@Retention(AnnotationRetention.RUNTIME)
+annotation class Directed(
+    val nodes: Array<KClass<*>>
 )
 
+@MustBeDocumented
+@Retention(AnnotationRetention.RUNTIME)
+annotation class Undirected(
+    val nodes: Array<KClass<*>>
+)
+
+@MustBeDocumented
+@Retention(AnnotationRetention.RUNTIME)
+annotation class Node(
+    val shape: Shape = Shape.Rectangle
+)

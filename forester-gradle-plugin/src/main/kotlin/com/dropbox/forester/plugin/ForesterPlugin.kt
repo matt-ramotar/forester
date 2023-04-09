@@ -2,7 +2,7 @@ package com.dropbox.forester.plugin
 
 import com.dropbox.forester.Edge
 import com.dropbox.forester.ForesterGraph
-import com.dropbox.forester.Node
+import com.dropbox.forester.GraphNode
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import java.io.FileInputStream
@@ -70,7 +70,7 @@ class ForesterPlugin : Plugin<Project> {
                     }
                 }
 
-                val nodes: MutableSet<Node> = mutableSetOf()
+                val nodes: MutableSet<GraphNode> = mutableSetOf()
 
                 annotatedClasses.forEach { (url, className) ->
                     val name = className.replace("/", ".")
@@ -210,14 +210,14 @@ class ForesterPlugin : Plugin<Project> {
 }
 
 
-fun getNodes(clazz: Class<*>): MutableList<Node> {
-    val nodes = mutableSetOf<Node>()
+fun getNodes(clazz: Class<*>): MutableList<GraphNode> {
+    val nodes = mutableSetOf<GraphNode>()
     val visited = mutableSetOf<Class<*>>()
     walk(clazz, nodes, visited)
     return nodes.toMutableList()
 }
 
-fun walk(clazz: Class<*>, nodes: MutableSet<Node>, visited: MutableSet<Class<*>> = mutableSetOf()) {
+fun walk(clazz: Class<*>, nodes: MutableSet<GraphNode>, visited: MutableSet<Class<*>> = mutableSetOf()) {
 
     if (visited.contains(clazz)) {
         return
@@ -226,10 +226,10 @@ fun walk(clazz: Class<*>, nodes: MutableSet<Node>, visited: MutableSet<Class<*>>
     visited.add(clazz)
 
     clazz.declaredFields.forEach {
-        if (it.type.isAssignableFrom(Node::class.java)) {
+        if (it.type.isAssignableFrom(GraphNode::class.java)) {
             try {
                 it.isAccessible = true
-                nodes.add(it.get(null) as Node)
+                nodes.add(it.get(null) as GraphNode)
             } catch (error: Throwable) {
                 println(error)
             }
