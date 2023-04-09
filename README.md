@@ -24,17 +24,7 @@ Forester keeps code and diagrams aligned:
 - **Collaboration.** Promote a culture of shared responsibility for keeping architecture diagrams current among your
   engineering team.
 
-## Installation
-
-```shell
-plugins { 
-  id("com.dropbox.forester.plugin") 
-}
-
-implementation("com.dropbox.forester:forester:0.0.1")
-```
-
-## Sample
+## Usage
 
 ```kotlin
 @Forester
