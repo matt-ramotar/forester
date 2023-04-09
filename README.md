@@ -22,6 +22,14 @@ Forester keeps code and diagrams aligned:
 - **Collaboration.** Promote a culture of shared responsibility for keeping architecture diagrams current among your
   engineering team.
 
+## Concepts
+
+- [Node](/README.md)
+- [Forest](/README.md)
+- [Graph](/README.md)
+- [Directed](/README.md)
+- [Undirected](/README.md)
+
 ## Usage
 
 ```kotlin
