@@ -3,35 +3,39 @@ package com.dropbox.forester
 import kotlinx.serialization.Serializable
 import kotlin.reflect.KClass
 
-
 @Serializable
-class ForesterGraph(
-    val edges: MutableList<Edge> = mutableListOf()
+data class ForesterGraph(
+    val edges: MutableSet<ForesterEdge> = mutableSetOf()
 ) {
-
-    fun undirected(head: GraphNode, tail: GraphNode): ForesterGraph {
-        edges.add(Edge(head, tail, Edge.Type.Undirected))
+    fun undirected(head: ForesterNode, tail: ForesterNode): ForesterGraph {
+        edges.add(ForesterEdge(head, tail, ForesterEdge.Type.Undirected))
         return this
     }
 
 
-    fun directed(head: GraphNode, tail: GraphNode): ForesterGraph {
-        edges.add(Edge(head, tail, Edge.Type.Directed))
+    fun directed(head: ForesterNode, tail: ForesterNode): ForesterGraph {
+        edges.add(ForesterEdge(head, tail, ForesterEdge.Type.Directed))
         return this
     }
 
     fun directed(head: KClass<*>, tail: KClass<*>): ForesterGraph {
-        edges.add(Edge(GraphNode(head.qualifiedName), GraphNode(tail.qualifiedName), Edge.Type.Directed))
+        edges.add(
+            ForesterEdge(
+                ForesterNode(head.qualifiedName),
+                ForesterNode(tail.qualifiedName),
+                ForesterEdge.Type.Directed
+            )
+        )
         return this
     }
 
-    fun directed(head: KClass<*>, tail: GraphNode): ForesterGraph {
-        edges.add(Edge(GraphNode(head.qualifiedName), tail, Edge.Type.Directed))
+    fun directed(head: KClass<*>, tail: ForesterNode): ForesterGraph {
+        edges.add(ForesterEdge(ForesterNode(head.qualifiedName), tail, ForesterEdge.Type.Directed))
         return this
     }
 
-    fun directed(head: GraphNode, tail: KClass<*>): ForesterGraph {
-        edges.add(Edge(head, GraphNode(tail.qualifiedName), Edge.Type.Directed))
+    fun directed(head: ForesterNode, tail: KClass<*>): ForesterGraph {
+        edges.add(ForesterEdge(head, ForesterNode(tail.qualifiedName), ForesterEdge.Type.Directed))
         return this
     }
 }
@@ -41,12 +45,12 @@ fun graph(graph: ForesterGraph.() -> Unit): ForesterGraph = ForesterGraph().appl
 }
 
 fun node(qualifiedName: String? = null, shape: Shape = Shape.Rectangle, loadable: Boolean = true) =
-    GraphNode(qualifiedName, shape, loadable)
+    ForesterNode(qualifiedName, shape, loadable)
 
-fun node(path: String? = null, shape: Shape = Shape.Rectangle): GraphNode {
-    return GraphNode(path, shape, loadable = false)
+fun node(path: String? = null, shape: Shape = Shape.Rectangle): ForesterNode {
+    return ForesterNode(path, shape, loadable = false)
 }
 
-fun node(clazz: KClass<*>, shape: Shape = Shape.Rectangle): GraphNode {
-    return GraphNode(clazz.qualifiedName!!, shape, loadable = true)
+fun node(clazz: KClass<*>, shape: Shape = Shape.Rectangle): ForesterNode {
+    return ForesterNode(clazz.qualifiedName!!, shape, loadable = true)
 }

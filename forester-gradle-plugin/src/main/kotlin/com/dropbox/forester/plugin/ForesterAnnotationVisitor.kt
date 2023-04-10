@@ -1,19 +1,13 @@
 package com.dropbox.forester.plugin
 
 import org.objectweb.asm.AnnotationVisitor
-import org.objectweb.asm.Opcodes
 
-class ForesterAnnotationVisitor : org.objectweb.asm.ClassVisitor(Opcodes.ASM9) {
-    var hasAnnotation = false
-    override fun visitAnnotation(
-        descriptor: String?,
-        visible: Boolean
-    ): AnnotationVisitor {
-
-        if (descriptor?.contains("Lcom/dropbox/forester/Forester;") == true) {
-            hasAnnotation = true
+class ForesterAnnotationVisitor(api: Int) : AnnotationVisitor(api) {
+    val values = mutableMapOf<String, Any?>()
+    override fun visit(name: String?, value: Any?) {
+        if (name != null) {
+            values[name] = value
         }
-
-        return super.visitAnnotation(descriptor, visible) ?: FallbackAnnotationVisitor()
+        super.visit(name, value)
     }
 }

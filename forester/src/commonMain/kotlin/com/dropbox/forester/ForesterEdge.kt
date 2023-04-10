@@ -2,11 +2,10 @@ package com.dropbox.forester
 
 import kotlinx.serialization.Serializable
 
-
 @Serializable
-data class Edge(
-    val u: GraphNode,
-    val v: GraphNode,
+data class ForesterEdge(
+    val u: ForesterNode,
+    val v: ForesterNode,
     val edgeType: Type
 ) {
 
@@ -15,6 +14,4 @@ data class Edge(
         Directed("Directed"),
         Undirected("Undirected")
     }
-
-
 }
