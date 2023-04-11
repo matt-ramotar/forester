@@ -4,11 +4,7 @@
 
 ## Problem
 
-It's crucial to have a comprehensive understanding of a system's architecture. Architecture diagrams offer valuable
-visual representations of the system's structure and its components. However, as a codebase evolves and its architecture
-adapts, maintaining synchronization between the code and diagrams can become increasingly challenging. Outdated diagrams
-can result in miscommunication, misconceptions about the system, and ultimately, increased development and maintenance
-costs.
+Diagrams help us visualize how different parts of a system are connected and interact with each other. But as a codebase evolves and its architecture adapts, keeping its diagrams in sync becomes increasingly challenging. Outdated diagrams can result in miscommunications, misunderstandings, and ultimately, increased development and maintenance costs. Moreover, as a system grows in complexity, it gets tougher and tougher to automatically generate diagrams that are manageable and meaningful.
 
 ## Solution
 
@@ -21,6 +17,7 @@ Forester keeps code and diagrams aligned:
   whenever significant code changes are made.
 - **Collaboration.** Promote a culture of shared responsibility for keeping architecture diagrams current among your
   engineering team.
+- **Manageable and meaningful.** Diagrams must be adaptable and context-aware. It must be possible to omit details, scope in on specific areas, and visualize relationships among certain components.
 
 ## Concepts
 
