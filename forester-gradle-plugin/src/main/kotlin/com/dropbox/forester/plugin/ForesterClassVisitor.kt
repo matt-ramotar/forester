@@ -5,17 +5,48 @@ import com.dropbox.forester.Shape
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.Opcodes
-import kotlin.reflect.KClass
 
-
-@Suppress("UNCHECKED_CAST")
 class ForesterClassVisitor(private val annotation: ForesterAnnotation) :
     ClassVisitor(Opcodes.ASM9) {
     var hasAnnotation = false
-    lateinit var nodeU: Forester.Node
+    private lateinit var nodeU: Forester.Node
+    private lateinit var foresterAnnotationVisitor: ForesterAnnotationVisitor
     val edges: MutableSet<Forester.Edge> = mutableSetOf()
+    private val nodes = mutableSetOf<String>()
 
-    private fun ForesterAnnotationVisitor.getNodes() = values["nodes"] as? Array<KClass<*>>
+    fun edges() {
+        if (hasAnnotation) {
+            when (annotation) {
+                ForesterAnnotation.Directed -> {
+                    nodes.filter { it != nodeU.qualifiedName?.simpleName() }.forEach { node ->
+                        edges.add(
+                            Forester.Edge(
+                                u = nodeU,
+                                v = Forester.Node(node, Shape.Class),
+                                edgeType = Forester.Edge.Type.Directed
+                            )
+                        )
+                    }
+                }
+
+                ForesterAnnotation.Undirected -> {
+                    nodes.filter { it != nodeU.qualifiedName?.simpleName() }.forEach {
+                        edges.add(
+                            Forester.Edge(
+                                u = nodeU,
+                                v = Forester.Node(it, Shape.Class),
+                                edgeType = Forester.Edge.Type.Undirected
+                            )
+                        )
+                    }
+                }
+
+                else -> {}
+            }
+        }
+    }
+
+
     override fun visit(
         version: Int,
         access: Int,
@@ -25,42 +56,28 @@ class ForesterClassVisitor(private val annotation: ForesterAnnotation) :
         interfaces: Array<out String>?
     ) {
         nodeU = Forester.Node(name, shape = Shape.Class)
-        super.visit(version, access, name, signature, superName, interfaces)
     }
 
     override fun visitAnnotation(
         descriptor: String?,
         visible: Boolean
-    ): AnnotationVisitor? {
+    ): AnnotationVisitor {
+        val eligible = listOf(ForesterAnnotation.Directed, ForesterAnnotation.Undirected)
+        foresterAnnotationVisitor = ForesterAnnotationVisitor(
+            api,
+            nodeU.qualifiedName?.simpleName(),
+            eligible.contains(annotation)
+        ) {
+            nodes.add(it)
+        }
 
         if (descriptor?.contains(annotation.descriptor) == true) {
             hasAnnotation = true
-            val foresterAnnotationVisitor = ForesterAnnotationVisitor(api)
-
-
-            when (annotation) {
-                ForesterAnnotation.Directed -> {
-                    val classes = foresterAnnotationVisitor.getNodes()
-                    classes?.forEach { clazz ->
-                        val nodeV = Forester.Node(clazz.qualifiedName, shape = Shape.Class)
-                        edges.add(Forester.Edge(nodeU, nodeV, Forester.Edge.Type.Directed))
-                    }
-                }
-
-                ForesterAnnotation.Undirected -> {
-                    val classes = foresterAnnotationVisitor.getNodes()
-                    classes?.forEach { clazz ->
-                        val nodeV = Forester.Node(clazz.qualifiedName, shape = Shape.Class)
-                        edges.add(Forester.Edge(nodeU, nodeV, Forester.Edge.Type.Undirected))
-                    }
-                }
-
-                else -> {}
-            }
-            return foresterAnnotationVisitor
         }
 
-        return super.visitAnnotation(descriptor, visible)
+        foresterAnnotationVisitor.visitArray("nodes")
+
+        return foresterAnnotationVisitor
     }
 
 

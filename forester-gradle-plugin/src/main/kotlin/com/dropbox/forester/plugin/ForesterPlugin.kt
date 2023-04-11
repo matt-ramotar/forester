@@ -1,3 +1,5 @@
+@file:Suppress("UNCHECKED_CAST")
+
 package com.dropbox.forester.plugin
 
 import com.dropbox.forester.Forester
@@ -18,8 +20,6 @@ class ForesterPlugin : Plugin<Project> {
 
     private val AnnotatedClass.simpleName
         get() = className.replace("/", ".")
-
-    private fun String.simpleName() = replace("/", ".")
 
     private data class AnnotatedClass(
         val url: URL,
@@ -49,12 +49,13 @@ class ForesterPlugin : Plugin<Project> {
     private fun URL.getEdges(edges: MutableSet<Forester.Edge>) {
         val classReader = ClassReader(FileInputStream(path))
         val visitorDirected = ForesterClassVisitor(ForesterAnnotation.Directed)
-        val visitorUndirected = ForesterClassVisitor(ForesterAnnotation.Undirected)
-
         classReader.accept(visitorDirected, 0)
+        visitorDirected.edges()
         edges.addAll(visitorDirected.edges)
 
+        val visitorUndirected = ForesterClassVisitor(ForesterAnnotation.Undirected)
         classReader.accept(visitorUndirected, 0)
+        visitorUndirected.edges()
         edges.addAll(visitorUndirected.edges)
     }
 
@@ -194,6 +195,10 @@ class ForesterPlugin : Plugin<Project> {
                     annotatedClass.url.getEdges(edges)
                 }
 
+                annotatedForesterNodeClasses.forEach { annotatedClass ->
+                    urlClassLoader.loadClass(annotatedClass.simpleName)
+                }
+
                 annotatedGraphClasses.forEach { annotatedClass ->
                     val clazz = urlClassLoader.loadClass(annotatedClass.simpleName)
                     clazz.methods.forEach { method ->
@@ -294,3 +299,5 @@ private fun Class<*>.walk(
         }
     }
 }
+
+internal fun String.simpleName() = replace("/", ".")
