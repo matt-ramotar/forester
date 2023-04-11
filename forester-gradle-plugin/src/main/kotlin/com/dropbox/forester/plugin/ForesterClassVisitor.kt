@@ -1,7 +1,6 @@
 package com.dropbox.forester.plugin
 
-import com.dropbox.forester.ForesterEdge
-import com.dropbox.forester.ForesterNode
+import com.dropbox.forester.Forester
 import com.dropbox.forester.Shape
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.ClassVisitor
@@ -13,10 +12,10 @@ import kotlin.reflect.KClass
 class ForesterClassVisitor(private val annotation: ForesterAnnotation) :
     ClassVisitor(Opcodes.ASM9) {
     var hasAnnotation = false
-    lateinit var nodeU: ForesterNode
-    val edges: MutableSet<ForesterEdge> = mutableSetOf()
+    lateinit var nodeU: Forester.Node
+    val edges: MutableSet<Forester.Edge> = mutableSetOf()
 
-    private fun ForesterAnnotationVisitor.getNodes() = values["nodes"] as Array<KClass<*>>
+    private fun ForesterAnnotationVisitor.getNodes() = values["nodes"] as? Array<KClass<*>>
     override fun visit(
         version: Int,
         access: Int,
@@ -25,7 +24,7 @@ class ForesterClassVisitor(private val annotation: ForesterAnnotation) :
         superName: String?,
         interfaces: Array<out String>?
     ) {
-        nodeU = ForesterNode(name, shape = Shape.Class)
+        nodeU = Forester.Node(name, shape = Shape.Class)
         super.visit(version, access, name, signature, superName, interfaces)
     }
 
@@ -42,17 +41,17 @@ class ForesterClassVisitor(private val annotation: ForesterAnnotation) :
             when (annotation) {
                 ForesterAnnotation.Directed -> {
                     val classes = foresterAnnotationVisitor.getNodes()
-                    classes.forEach { clazz ->
-                        val nodeV = ForesterNode(clazz.qualifiedName, shape = Shape.Class)
-                        edges.add(ForesterEdge(nodeU, nodeV, ForesterEdge.Type.Directed))
+                    classes?.forEach { clazz ->
+                        val nodeV = Forester.Node(clazz.qualifiedName, shape = Shape.Class)
+                        edges.add(Forester.Edge(nodeU, nodeV, Forester.Edge.Type.Directed))
                     }
                 }
 
                 ForesterAnnotation.Undirected -> {
                     val classes = foresterAnnotationVisitor.getNodes()
-                    classes.forEach { clazz ->
-                        val nodeV = ForesterNode(clazz.qualifiedName, shape = Shape.Class)
-                        edges.add(ForesterEdge(nodeU, nodeV, ForesterEdge.Type.Undirected))
+                    classes?.forEach { clazz ->
+                        val nodeV = Forester.Node(clazz.qualifiedName, shape = Shape.Class)
+                        edges.add(Forester.Edge(nodeU, nodeV, Forester.Edge.Type.Undirected))
                     }
                 }
 

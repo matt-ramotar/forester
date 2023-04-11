@@ -1,8 +1,6 @@
 package com.dropbox.forester.plugin
 
-import com.dropbox.forester.ForesterEdge
-import com.dropbox.forester.ForesterGraph
-import com.dropbox.forester.ForesterNode
+import com.dropbox.forester.Forester
 import com.dropbox.forester.Shape
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -21,13 +19,17 @@ class ForesterPlugin : Plugin<Project> {
     private val AnnotatedClass.simpleName
         get() = className.replace("/", ".")
 
+    private fun String.simpleName() = replace("/", ".")
+
     private data class AnnotatedClass(
         val url: URL,
         val className: String
     )
 
+    private val Project.compiledDirPath
+        get() = this.buildDir.resolve("classes/kotlin/jvm/main")
+
     private fun Project.generateUrls(): Array<URL> {
-        val compiledDirPath = this.buildDir.resolve("classes/kotlin/jvm/main")
         val files = compiledDirPath
             .walk()
             .flatMap { file -> listOf(file, file.parentFile) }
@@ -41,10 +43,10 @@ class ForesterPlugin : Plugin<Project> {
     }
 
     private fun Project.generateClasspath(): Array<URL> {
-        return arrayOf(buildDir.toURI().toURL()) + generateUrls()
+        return arrayOf(compiledDirPath.toURI().toURL()) + generateUrls()
     }
 
-    private fun URL.getEdges(edges: MutableSet<ForesterEdge>) {
+    private fun URL.getEdges(edges: MutableSet<Forester.Edge>) {
         val classReader = ClassReader(FileInputStream(path))
         val visitorDirected = ForesterClassVisitor(ForesterAnnotation.Directed)
         val visitorUndirected = ForesterClassVisitor(ForesterAnnotation.Undirected)
@@ -64,7 +66,7 @@ class ForesterPlugin : Plugin<Project> {
         val className = classReader.className
 
         if (visitor.hasAnnotation) {
-            AnnotatedClass(this, className)
+            AnnotatedClass(this, className.simpleName())
         } else {
             null
         }
@@ -77,14 +79,14 @@ class ForesterPlugin : Plugin<Project> {
         generateUrls().mapNotNull { url -> url.annotatedClassOrNull(annotation) }.toMutableList()
 
 
-    private fun generateEdgesD2(edges: MutableSet<ForesterEdge>) =
+    private fun generateEdgesD2(edges: MutableSet<Forester.Edge>) =
         edges.joinToString("\n") { edge ->
             val arrow = when (edge.edgeType) {
-                ForesterEdge.Type.Directed -> "->"
-                ForesterEdge.Type.Undirected -> "<->"
+                Forester.Edge.Type.Directed -> "->"
+                Forester.Edge.Type.Undirected -> "<->"
             }
 
-            "${edge.u} $arrow ${edge.v}"
+            "${edge.u.qualifiedName?.simpleName()} $arrow ${edge.v.qualifiedName?.simpleName()}"
         }
 
     private val KType.simpleName
@@ -93,15 +95,16 @@ class ForesterPlugin : Plugin<Project> {
 
     private fun generateForesterNodesD2(
         urlClassLoader: URLClassLoader,
-        nodes: MutableSet<ForesterNode>
+        nodes: MutableSet<Forester.Node>
     ) =
         nodes.joinToString("\n") { node ->
             try {
-                val clazz = urlClassLoader.loadClass(requireNotNull(node.qualifiedName))
+                val clazz =
+                    urlClassLoader.loadClass(requireNotNull(node.qualifiedName?.simpleName()))
                 val properties = clazz.kotlin.memberProperties
                 val methods = clazz.kotlin.memberFunctions
 
-                val propertiesD2 = properties.map { property ->
+                val propertiesD2 = properties.joinToString("\n") { property ->
                     "${property.name}: ${property.returnType.simpleName}"
                 }
 
@@ -169,13 +172,13 @@ class ForesterPlugin : Plugin<Project> {
                 val annotatedForesterNodeClasses =
                     target.loadAnnotatedClasses(ForesterAnnotation.Node)
                 val annotatedForesterNodes = annotatedForesterNodeClasses
-                    .map { ForesterNode(it.className, shape = Shape.Class) }
+                    .map { Forester.Node(it.className, shape = Shape.Class) }
                     .toMutableList()
                 val annotatedForestClasses = target.loadAnnotatedClasses(ForesterAnnotation.Forest)
                 val annotatedGraphClasses = target.loadAnnotatedClasses(ForesterAnnotation.Graph)
 
-                val nodes: MutableSet<ForesterNode> = annotatedForesterNodes.toMutableSet()
-                val edges: MutableSet<ForesterEdge> = mutableSetOf()
+                val nodes: MutableSet<Forester.Node> = annotatedForesterNodes.toMutableSet()
+                val edges: MutableSet<Forester.Edge> = mutableSetOf()
                 val visited: MutableSet<Class<*>> = mutableSetOf()
 
                 annotatedForestClasses.forEach { annotatedClass ->
@@ -196,8 +199,10 @@ class ForesterPlugin : Plugin<Project> {
                     clazz.methods.forEach { method ->
                         try {
                             val instance = clazz.newInstance()
-                            val graph = method.invoke(instance) as ForesterGraph
-                            edges.addAll(graph.edges)
+                            val graph = method.invoke(instance) as? Forester.Graph
+                            if (graph != null) {
+                                edges.addAll(graph.edges)
+                            }
                         } catch (_: Throwable) {
                             // Do nothing
                         }
@@ -247,13 +252,21 @@ private fun Project.writeD2(nodesD2: String, edgesD2: String) {
     val path = file("${buildDir.path}/forester/${name}.d2")
     path.delete()
 
-    path.appendText(nodesD2)
+    path.appendText(
+        """
+            $nodesD2
+        """.trimIndent()
+    )
     path.appendText("\n")
-    path.appendText(edgesD2)
+    path.appendText(
+        """
+            $edgesD2
+        """.trimIndent()
+    )
 }
 
 private fun Class<*>.walk(
-    nodes: MutableSet<ForesterNode>,
+    nodes: MutableSet<Forester.Node>,
     visited: MutableSet<Class<*>> = mutableSetOf()
 ) {
     if (visited.contains(this)) {
@@ -263,10 +276,13 @@ private fun Class<*>.walk(
     visited.add(this)
 
     declaredFields.forEach { field ->
-        if (field.type.isAssignableFrom(ForesterNode::class.java)) {
+        if (field.type.isAssignableFrom(Forester.Node::class.java)) {
             try {
                 field.isAccessible = true
-                nodes.add(field.get(null) as ForesterNode)
+                val node = field.get(Any()) as? Forester.Node
+                if (node != null) {
+                    nodes.add(node)
+                }
             } catch (error: Throwable) {
                 println(error)
             }
