@@ -1,19 +1,31 @@
+@file:Suppress("UNCHECKED_CAST")
+
 package com.dropbox.forester.plugin
 
 import org.objectweb.asm.AnnotationVisitor
-import org.objectweb.asm.Opcodes
 
-class ForesterAnnotationVisitor : org.objectweb.asm.ClassVisitor(Opcodes.ASM9) {
-    var hasAnnotation = false
-    override fun visitAnnotation(
-        descriptor: String?,
-        visible: Boolean
-    ): AnnotationVisitor {
+class ForesterAnnotationVisitor(
+    api: Int,
+    private val simpleName: String?,
+    private val collectEdges: Boolean = false,
+    val addNode: (className: String) -> Unit
+) :
+    AnnotationVisitor(api) {
+    val nodes = mutableSetOf<String>()
 
-        if (descriptor?.contains("Lcom/dropbox/forester/Forester;") == true) {
-            hasAnnotation = true
+    override fun visitArray(name: String?): AnnotationVisitor {
+
+        return this.apply { nodes.addAll(this.nodes) }
+    }
+
+    override fun visit(name: String?, value: Any?) {
+        if (collectEdges && value.toString().startsWith("L")) {
+            val className = value.toString().removePrefix("L").replace(";", "").replace("/", ".")
+            if (className != simpleName) {
+                nodes.add(className)
+                addNode(className)
+            }
         }
-
-        return super.visitAnnotation(descriptor, visible) ?: FallbackAnnotationVisitor()
+        super.visit(name, value)
     }
 }

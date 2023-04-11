@@ -1,9 +1,7 @@
-package com.dropbox.forester.samples.counter.common.forester
+package com.dropbox.forester.samples.counter.common
 
 import com.dropbox.forester.Graph
 import com.dropbox.forester.graph
-import com.dropbox.forester.samples.counter.common.CounterApi
-import com.dropbox.forester.samples.counter.common.CounterViewModel
 
 @Graph
 class CommonGraph {

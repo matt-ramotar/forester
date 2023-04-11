@@ -1,206 +1,240 @@
+@file:Suppress("UNCHECKED_CAST")
+
 package com.dropbox.forester.plugin
 
-import com.dropbox.forester.Edge
-import com.dropbox.forester.ForesterGraph
-import com.dropbox.forester.GraphNode
+import com.dropbox.forester.Forester
+import com.dropbox.forester.Shape
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
+import org.objectweb.asm.ClassReader
 import java.io.FileInputStream
 import java.net.URL
 import java.net.URLClassLoader
+import kotlin.reflect.KType
 import kotlin.reflect.full.memberFunctions
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.jvmErasure
 
 class ForesterPlugin : Plugin<Project> {
+
+    private val AnnotatedClass.simpleName
+        get() = className.replace("/", ".")
+
+    private data class AnnotatedClass(
+        val url: URL,
+        val className: String
+    )
+
+    private val Project.compiledDirPath
+        get() = this.buildDir.resolve("classes/kotlin/jvm/main")
+
+    private fun Project.generateUrls(): Array<URL> {
+        val files = compiledDirPath
+            .walk()
+            .flatMap { file -> listOf(file, file.parentFile) }
+            .filter { file -> file.isFile && file.name.endsWith(".class") }
+            .toList()
+
+        return files
+            .filter { it.isFile && it.name.endsWith(".class") }
+            .map { it.toURI().toURL() }
+            .toTypedArray()
+    }
+
+    private fun Project.generateClasspath(): Array<URL> {
+        return arrayOf(compiledDirPath.toURI().toURL()) + generateUrls()
+    }
+
+    private fun URL.getEdges(edges: MutableSet<Forester.Edge>) {
+        val classReader = ClassReader(FileInputStream(path))
+        val visitorDirected = ForesterClassVisitor(ForesterAnnotation.Directed)
+        classReader.accept(visitorDirected, 0)
+        visitorDirected.edges()
+        edges.addAll(visitorDirected.edges)
+
+        val visitorUndirected = ForesterClassVisitor(ForesterAnnotation.Undirected)
+        classReader.accept(visitorUndirected, 0)
+        visitorUndirected.edges()
+        edges.addAll(visitorUndirected.edges)
+    }
+
+    private fun URL.annotatedClassOrNull(annotation: ForesterAnnotation): AnnotatedClass? = try {
+        val classReader = ClassReader(FileInputStream(path))
+        val visitor = ForesterClassVisitor(annotation)
+        classReader.accept(visitor, 0)
+
+        val className = classReader.className
+
+        if (visitor.hasAnnotation) {
+            AnnotatedClass(this, className.simpleName())
+        } else {
+            null
+        }
+    } catch (error: Throwable) {
+        println(error)
+        null
+    }
+
+    private fun Project.loadAnnotatedClasses(annotation: ForesterAnnotation): MutableList<AnnotatedClass> =
+        generateUrls().mapNotNull { url -> url.annotatedClassOrNull(annotation) }.toMutableList()
+
+
+    private fun generateEdgesD2(edges: MutableSet<Forester.Edge>) =
+        edges.joinToString("\n") { edge ->
+            val arrow = when (edge.edgeType) {
+                Forester.Edge.Type.Directed -> "->"
+                Forester.Edge.Type.Undirected -> "<->"
+            }
+
+            "${edge.u.qualifiedName?.simpleName()} $arrow ${edge.v.qualifiedName?.simpleName()}"
+        }
+
+    private val KType.simpleName
+        get() = toString().replace("kotlin.", "")
+
+
+    private fun generateForesterNodesD2(
+        urlClassLoader: URLClassLoader,
+        nodes: MutableSet<Forester.Node>
+    ) =
+        nodes.joinToString("\n") { node ->
+            try {
+                val clazz =
+                    urlClassLoader.loadClass(requireNotNull(node.qualifiedName?.simpleName()))
+                val properties = clazz.kotlin.memberProperties
+                val methods = clazz.kotlin.memberFunctions
+
+                val propertiesD2 = properties.joinToString("\n") { property ->
+                    "${property.name}: ${property.returnType.simpleName}"
+                }
+
+                val methodsD2 = methods
+                    .filter { method ->
+                        !setOf(
+                            "equals",
+                            "hashCode",
+                            "toString"
+                        ).contains(method.name)
+                    }
+                    .joinToString("\n") { method ->
+                        val args = method.parameters.map { it.type.jvmErasure.simpleName }.drop(1)
+                        "${method.name}(${args.joinToString(", ")}): ${method.returnType.simpleName}"
+                    }
+
+                """
+                    ${node.qualifiedName}: {
+                        shape: class
+                        $propertiesD2
+                        $methodsD2
+                    }
+                """.trimIndent()
+            } catch (error: Throwable) {
+                """
+                    ${node.qualifiedName}: {
+                        shape: ${node.shape.name.lowercase()}
+                    }
+                """.trimIndent()
+            }
+        }
+
+
     override fun apply(target: Project) {
         val extension = target.extensions.create("forester", ForesterPluginExt::class.java)
 
-        target.tasks.register("forester") {
-            it.group = "Forester"
-            it.description = "Map the forest"
 
-            it.doFirst {
+        val compileTaskName = "compileKotlinMetadata"
+        val compileTask = target.tasks.named(compileTaskName, KotlinCompile::class.java)
+
+
+        target.tasks.register("forester") { task ->
+            task.dependsOn(compileTask)
+
+            task.group = "Forester"
+            task.description = "Map the forest"
+
+            task.doFirst { _ ->
                 if (extension.update) {
-                    target.exec {
-                        it.executable("sh")
-                        it.args("-c", "curl -fsSL https://d2lang.com/install.sh | sh -s")
+                    target.exec { execSpec ->
+                        execSpec.executable("sh")
+                        execSpec.args("-c", "curl -fsSL https://d2lang.com/install.sh | sh -s")
                     }
                 }
             }
 
-            it.extensions.add("forester", extension)
+            task.extensions.add("forester", extension)
 
             val outputDir = extension.outputDir ?: "${target.buildDir.path}/forester"
             val outputPath = outputDir + "/${target.name}"
 
-            it.doLast {
-                val buildDir = target.buildDir.resolve("classes/kotlin/jvm/main")
-
-                val files = buildDir
-                    .walk()
-                    .flatMap { file -> listOf(file, file.parentFile) }
-                    .filter { file -> file.isFile && file.name.endsWith(".class") }
-                    .toList()
-
-                val urls = files
-                    .filter { it.isFile && it.name.endsWith(".class") }
-                    .map { it.toURI().toURL() }
-                    .toTypedArray()
-
-                val classpath = arrayOf(buildDir.toURI().toURL()) + urls
+            task.doLast { _ ->
+                val classpath = target.generateClasspath()
                 val urlClassLoader = URLClassLoader(classpath, javaClass.classLoader)
+                val annotatedForesterNodeClasses =
+                    target.loadAnnotatedClasses(ForesterAnnotation.Node)
+                val annotatedForesterNodes = annotatedForesterNodeClasses
+                    .map { Forester.Node(it.className, shape = Shape.Class) }
+                    .toMutableList()
+                val annotatedForestClasses = target.loadAnnotatedClasses(ForesterAnnotation.Forest)
+                val annotatedGraphClasses = target.loadAnnotatedClasses(ForesterAnnotation.Graph)
 
-                val annotatedClasses = mutableListOf<Pair<URL, String>>()
+                val nodes: MutableSet<Forester.Node> = annotatedForesterNodes.toMutableSet()
+                val edges: MutableSet<Forester.Edge> = mutableSetOf()
+                val visited: MutableSet<Class<*>> = mutableSetOf()
 
-                urls.forEach { url ->
+                annotatedForestClasses.forEach { annotatedClass ->
                     try {
-                        val classReader = org.objectweb.asm.ClassReader(FileInputStream(url.path))
-                        val visitor = ForesterAnnotationVisitor()
-
-                        classReader.accept(visitor, 0)
-
-                        val className = classReader.className
-
-                        if (visitor.hasAnnotation) {
-                            annotatedClasses.add(Pair(url, className))
-                        }
+                        val clazz = urlClassLoader.loadClass(annotatedClass.simpleName)
+                        clazz.walk(nodes, visited)
                     } catch (error: Throwable) {
                         println(error)
                     }
                 }
 
-                val nodes: MutableSet<GraphNode> = mutableSetOf()
-
-                annotatedClasses.forEach { (url, className) ->
-                    val name = className.replace("/", ".")
-                    val clazz = urlClassLoader.loadClass(name)
-
-                    nodes.addAll(getNodes(clazz))
+                annotatedForesterNodeClasses.forEach { annotatedClass ->
+                    annotatedClass.url.getEdges(edges)
                 }
 
+                annotatedForesterNodeClasses.forEach { annotatedClass ->
+                    urlClassLoader.loadClass(annotatedClass.simpleName)
+                }
 
-                annotatedClasses.forEach { (url, className) ->
-                    val name = className.replace("/", ".")
-
-
-                    try {
-
-                        val clazz = urlClassLoader.loadClass(name)
-
-                        val method = clazz.methods.firstOrNull()
-
-                        if (method != null) {
+                annotatedGraphClasses.forEach { annotatedClass ->
+                    val clazz = urlClassLoader.loadClass(annotatedClass.simpleName)
+                    clazz.methods.forEach { method ->
+                        try {
                             val instance = clazz.newInstance()
-                            val config = method.invoke(instance) as? ForesterGraph
-
-                            if (config != null) {
-
-                                val edgesD2 = config.edges.map { edge ->
-                                    when (edge.edgeType) {
-                                        Edge.Type.Directed -> {
-                                            """
-                                ${edge.u.qualifiedName} -> ${edge.v.qualifiedName}
-                            """.trimIndent()
-                                        }
-
-                                        Edge.Type.Undirected -> {
-                                            """
-                                ${edge.u.qualifiedName} <-> ${edge.v.qualifiedName}
-                            """.trimIndent()
-                                        }
-                                    }
-                                }
-
-                                val nodesD2 = nodes.toMutableList().map { node ->
-
-                                    try {
-                                        val cls = urlClassLoader.loadClass(requireNotNull(node.qualifiedName))
-                                        val fields = cls.kotlin.memberProperties
-
-
-                                        val methods = cls.kotlin.memberFunctions
-
-                                        """${node.qualifiedName ?: ""}: {
-                                            shape: class
-                                            
-                                            ${
-                                            fields.map { field ->
-                                                "${field.name}: ${field.returnType.toString().replace("kotlin.", "")}"
-                                            }.joinToString("\n").trimIndent()
-                                        }
-
-                                            ${
-                                            methods.filter {
-                                                !setOf(
-                                                    "equals",
-                                                    "hashCode",
-                                                    "toString"
-                                                ).contains(it.name)
-                                            }.map { method ->
-
-
-                                                val argsList = method.parameters.map { it.type.jvmErasure.simpleName }
-                                                val args = argsList.drop(1)
-
-                                                "${method.name}(${args.joinToString(", ").trim()}): ${
-                                                    method.returnType.toString().replace("kotlin.", "")
-                                                }"
-                                            }.joinToString("\n").trimIndent()
-                                        }
-                                        }""".trimIndent()
-
-
-                                    } catch (error: Throwable) {
-                                        """
-                               ${node.qualifiedName ?: ""}: {
-                                    shape: ${node.shape.name.lowercase()}
-                                }
-                            """.trimIndent()
-                                    }
-                                }
-
-                                if (!target.file(target.buildDir.path).exists()) {
-                                    target.file(target.buildDir.path).mkdir()
-                                }
-
-                                if (!target.file("${target.buildDir.path}/forester").exists()) {
-                                    target.file("${target.buildDir.path}/forester").mkdir()
-                                }
-
-                                val path = target.file("${target.buildDir.path}/forester/${target.name}.d2")
-                                path.delete()
-
-                                val outputFile = path
-
-                                nodesD2.forEach { node ->
-                                    outputFile.appendText(node)
-                                    outputFile.appendText("\n")
-                                }
-
-                                edgesD2.forEach { edge ->
-                                    outputFile.appendText(edge)
-                                    outputFile.appendText("\n")
-                                }
+                            val graph = method.invoke(instance) as? Forester.Graph
+                            if (graph != null) {
+                                edges.addAll(graph.edges)
                             }
+                        } catch (_: Throwable) {
+                            // Do nothing
                         }
-                    } catch (error: Throwable) {
-                        println(error)
                     }
                 }
 
+                val nodesD2 = generateForesterNodesD2(urlClassLoader, nodes)
+                val edgesD2 = generateEdgesD2(edges)
+                target.writeD2(nodesD2, edgesD2)
+            }
+
+            task.doLast {
                 target.exec {
                     try {
+                        target.file("${target.buildDir.path}/forester").mkdir()
+                        target.file("${target.buildDir.path}/forester/${target.name}.d2")
+                            .createNewFile()
+
                         val path = target.file("${target.buildDir.path}/forester/${target.name}.d2")
 
                         it.commandLine(
-                            "/opt/homebrew/Cellar/d2/0.3.0/bin/d2",
+                            "/opt/homebrew/Cellar/d2/0.4.0/bin/d2",
                             path,
                             "${outputPath}.svg",
                             "--sketch"
                         )
                     } catch (error: Throwable) {
-
                         println("Run ./gradlew :${target}:installD2")
                     }
                 }
@@ -210,49 +244,60 @@ class ForesterPlugin : Plugin<Project> {
 }
 
 
-fun getNodes(clazz: Class<*>): MutableList<GraphNode> {
-    val nodes = mutableSetOf<GraphNode>()
-    val visited = mutableSetOf<Class<*>>()
-    walk(clazz, nodes, visited)
-    return nodes.toMutableList()
+private fun Project.writeD2(nodesD2: String, edgesD2: String) {
+
+    if (!file(buildDir.path).exists()) {
+        file(buildDir.path).mkdir()
+    }
+
+    if (!file("${buildDir.path}/forester").exists()) {
+        file("${buildDir.path}/forester").mkdir()
+    }
+
+    val path = file("${buildDir.path}/forester/${name}.d2")
+    path.delete()
+
+    path.appendText(
+        """
+            $nodesD2
+        """.trimIndent()
+    )
+    path.appendText("\n")
+    path.appendText(
+        """
+            $edgesD2
+        """.trimIndent()
+    )
 }
 
-fun walk(clazz: Class<*>, nodes: MutableSet<GraphNode>, visited: MutableSet<Class<*>> = mutableSetOf()) {
-
-    if (visited.contains(clazz)) {
+private fun Class<*>.walk(
+    nodes: MutableSet<Forester.Node>,
+    visited: MutableSet<Class<*>> = mutableSetOf()
+) {
+    if (visited.contains(this)) {
         return
     }
 
-    visited.add(clazz)
+    visited.add(this)
 
-    clazz.declaredFields.forEach {
-        if (it.type.isAssignableFrom(GraphNode::class.java)) {
+    declaredFields.forEach { field ->
+        if (field.type.isAssignableFrom(Forester.Node::class.java)) {
             try {
-                it.isAccessible = true
-                nodes.add(it.get(null) as GraphNode)
+                field.isAccessible = true
+                val node = field.get(Any()) as? Forester.Node
+                if (node != null) {
+                    nodes.add(node)
+                }
             } catch (error: Throwable) {
                 println(error)
             }
 
-        } else if (it.type.declaredClasses.isNotEmpty()) {
-            it.type.declaredClasses.forEach { subClass ->
-                walk(subClass, nodes, visited)
+        } else if (field.type.declaredClasses.isNotEmpty()) {
+            field.type.declaredClasses.forEach { subClass ->
+                subClass.walk(nodes, visited)
             }
         }
-
     }
 }
 
-fun kotlinTypeToJavaName(type: String): String {
-    return when (type) {
-        "kotlin.Int" -> "int"
-        "kotlin.Long" -> "long"
-        "kotlin.Short" -> "short"
-        "kotlin.Byte" -> "byte"
-        "kotlin.Float" -> "float"
-        "kotlin.Double" -> "double"
-        "kotlin.Boolean" -> "boolean"
-        "kotlin.Char" -> "char"
-        else -> type
-    }
-}
+internal fun String.simpleName() = replace("/", ".")

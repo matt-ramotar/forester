@@ -1,4 +1,4 @@
-package com.dropbox.forester.samples.counter.common.forester
+package com.dropbox.forester.samples.counter.common
 
 import com.dropbox.forester.Forest
 import com.dropbox.forester.Shape

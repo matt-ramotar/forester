@@ -12,7 +12,8 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(libs.kotlinx.serialization.core)
-                implementation project(":forester")
+                implementation(project(":forester-gradle-plugin"))
+                implementation(project(":forester"))
             }
         }
     }
@@ -20,4 +21,3 @@ kotlin {
 forester {
     outputDir = "docs"
 }
-
